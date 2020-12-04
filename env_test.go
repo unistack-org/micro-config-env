@@ -6,7 +6,6 @@ import (
 	"testing"
 	"context"
 	"os"
-	"fmt"
 )
 
 type Config struct {
@@ -15,6 +14,7 @@ type Config struct {
 	StringSlice []string `env:"STRING_SLICE"`
 	IntSlice []int `env:"INT_SLICE"`
 	MapStringValue map[string]string `env:"MAP_STRING"`
+	MapIntValue map[string]int `env:"MAP_INT"`
 }
 
 func TestEnv(t *testing.T) {
@@ -40,6 +40,7 @@ func TestEnv(t *testing.T) {
 	os.Setenv("STRING_SLICE", "STRING_SLICE1,STRING_SLICE2;STRING_SLICE3")
 	os.Setenv("INT_SLICE", "1,2,3,4,5")
 	os.Setenv("MAP_STRING", "key1=val1,key2=val2")
+	os.Setenv("MAP_INT", "key1=1,key2=2")
 
 	if err := cfg.Load(ctx); err !=nil {
 		t.Fatal(err)
@@ -56,5 +57,12 @@ func TestEnv(t *testing.T) {
 		t.Fatalf("something wrong with env config: %v", conf)
 	}
 
-	fmt.Printf("%#+v\n", conf)
+	if len(conf.MapStringValue) != 2 {
+		t.Fatalf("something wrong with env config: %v", conf)
+	}
+
+	if len(conf.MapIntValue) != 2 {
+		t.Fatalf("something wrong with env config: %v", conf)
+	}
+
 }

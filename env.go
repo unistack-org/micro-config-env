@@ -43,9 +43,28 @@ func (c *envConfig) Load(ctx context.Context) error {
 
 func (c *envConfig) fillValue(ctx context.Context, value reflect.Value, val string) error {
 	switch value.Kind() {
+	case reflect.Map:
+		t := value.Type()
+		nvals := strings.FieldsFunc(val, func(c rune) bool { return c == ',' || c == ';' })
+		if value.IsNil() {
+			value.Set(reflect.MakeMapWithSize(t, len(nvals)))
+		}
+		kt := t.Key()
+		et := t.Elem()
+		for _, nval := range nvals {
+			kv := strings.FieldsFunc(nval, func(c rune) bool { return c == '=' })
+			mkey := reflect.Indirect(reflect.New(kt))
+			mval := reflect.Indirect(reflect.New(et))
+			if err := c.fillValue(ctx, mkey, kv[0]); err != nil {
+				return err
+			}
+			if err := c.fillValue(ctx, mval, kv[1]); err != nil {
+				return err
+			}
+			value.SetMapIndex(mkey, mval)
+		}
 	case reflect.Slice, reflect.Array:
 		nvals := strings.FieldsFunc(val, func(c rune) bool { return c == ',' || c == ';' })
-	//	value = value.Elem()
 		value.Set(reflect.MakeSlice(reflect.SliceOf(value.Type().Elem()), len(nvals), len(nvals)))
 		for idx, nval := range nvals {
 			nvalue := reflect.Indirect(reflect.New(value.Type().Elem()))
@@ -53,7 +72,6 @@ func (c *envConfig) fillValue(ctx context.Context, value reflect.Value, val stri
 				return err
 			}
 			value.Index(idx).Set(nvalue)
-			//value.Set(reflect.Append(value, nvalue))
 		}
 	case reflect.Bool:
 		v, err := strconv.ParseBool(val)
@@ -145,7 +163,7 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 	if valueOf.Kind() == reflect.Ptr {
 		values = valueOf.Elem()
 	} else {
-	values = valueOf
+		values = valueOf
 	}
 
 	if values.Kind() == reflect.Invalid {
@@ -167,7 +185,8 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 		if len(field.PkgPath) != 0 {
 			continue
 		}
-		if value.Kind() == reflect.Ptr {
+		switch value.Kind() {
+		case reflect.Ptr :
 			if value.IsNil() {
 				if value.Type().Elem().Kind() != reflect.Struct {
 					// nil pointer to a non-struct: leave it alone

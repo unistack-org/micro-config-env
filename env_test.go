@@ -14,6 +14,7 @@ type Config struct {
 	BoolValue bool `env:"BOOL_VALUE"`
 	StringSlice []string `env:"STRING_SLICE"`
 	IntSlice []int `env:"INT_SLICE"`
+	MapStringValue map[string]string `env:"MAP_STRING"`
 }
 
 func TestEnv(t *testing.T) {
@@ -38,6 +39,7 @@ func TestEnv(t *testing.T) {
 	os.Setenv("BOOL_VALUE","true")
 	os.Setenv("STRING_SLICE", "STRING_SLICE1,STRING_SLICE2;STRING_SLICE3")
 	os.Setenv("INT_SLICE", "1,2,3,4,5")
+	os.Setenv("MAP_STRING", "key1=val1,key2=val2")
 
 	if err := cfg.Load(ctx); err !=nil {
 		t.Fatal(err)

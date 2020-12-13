@@ -207,7 +207,7 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 		}
 		val, ok := os.LookupEnv(tag)
 		if !ok {
-			return nil
+			continue
 		}
 
 		if err := c.fillValue(ctx, value, val); err != nil {

@@ -1,18 +1,17 @@
 package env
 
 import (
-	"github.com/unistack-org/micro/v3/config"
 	"context"
-	"reflect"
-	"strings"
 	"os"
+	"reflect"
 	"strconv"
-	"errors"
+	"strings"
+
+	"github.com/unistack-org/micro/v3/config"
 )
 
 var (
 	DefaultStructTag = "env"
-	ErrInvalidStruct = errors.New("invalid struct specified")
 )
 
 type envConfig struct {
@@ -23,8 +22,7 @@ func (c *envConfig) Options() config.Options {
 	return c.opts
 }
 
-
-func (c *envConfig) Init(opts...config.Option) error {
+func (c *envConfig) Init(opts ...config.Option) error {
 	for _, o := range opts {
 		o(&c.opts)
 	}
@@ -167,12 +165,8 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 	}
 
 	if values.Kind() == reflect.Invalid {
-		return ErrInvalidStruct
+		return config.ErrInvalidStruct
 	}
-
-	//	if values.Kind() != reflect.Struct {
-	//		return c.fillValue(ctx, values)
-	//	}
 
 	fields := values.Type()
 
@@ -186,7 +180,13 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 			continue
 		}
 		switch value.Kind() {
-		case reflect.Ptr :
+		case reflect.Struct:
+			value.Set(reflect.Indirect(reflect.New(value.Type())))
+			if err := c.fillValues(ctx, value); err != nil {
+				return err
+			}
+			continue
+		case reflect.Ptr:
 			if value.IsNil() {
 				if value.Type().Elem().Kind() != reflect.Struct {
 					// nil pointer to a non-struct: leave it alone
@@ -226,10 +226,10 @@ func (c *envConfig) String() string {
 	return "env"
 }
 
-func NewConfig(opts...config.Option) config.Config {
+func NewConfig(opts ...config.Option) config.Config {
 	options := config.NewOptions(opts...)
 	if len(options.StructTag) == 0 {
 		options.StructTag = DefaultStructTag
 	}
-	return &envConfig{opts:options}
+	return &envConfig{opts: options}
 }

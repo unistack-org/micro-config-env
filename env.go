@@ -30,10 +30,22 @@ func (c *envConfig) Init(opts ...config.Option) error {
 }
 
 func (c *envConfig) Load(ctx context.Context) error {
+	for _, fn := range c.opts.BeforeLoad {
+		if err := fn(ctx, c); err != nil {
+			return err
+		}
+	}
+
 	valueOf := reflect.ValueOf(c.opts.Struct)
 
 	if err := c.fillValues(ctx, valueOf); err != nil {
 		return err
+	}
+
+	for _, fn := range c.opts.AfterLoad {
+		if err := fn(ctx, c); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -219,6 +231,18 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 }
 
 func (c *envConfig) Save(ctx context.Context) error {
+	for _, fn := range c.opts.BeforeSave {
+		if err := fn(ctx, c); err != nil {
+			return err
+		}
+	}
+
+	for _, fn := range c.opts.AfterSave {
+		if err := fn(ctx, c); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

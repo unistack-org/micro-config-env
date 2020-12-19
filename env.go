@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/imdario/mergo"
 	"github.com/unistack-org/micro/v3/config"
 )
 
@@ -36,9 +37,15 @@ func (c *envConfig) Load(ctx context.Context) error {
 		}
 	}
 
-	valueOf := reflect.ValueOf(c.opts.Struct)
+	dst, err := config.Zero(c.opts.Struct)
+	if err == nil {
+		err = c.fillValues(ctx, reflect.ValueOf(dst))
+	}
+	if err != nil && !c.opts.AllowFail {
+		return err
+	}
 
-	if err := c.fillValues(ctx, valueOf); err != nil && !c.opts.AllowFail {
+	if err = mergo.Merge(c.opts.Struct, dst, mergo.WithOverride, mergo.WithTypeCheck, mergo.WithAppendSlice); err != nil && !c.opts.AllowFail {
 		return err
 	}
 

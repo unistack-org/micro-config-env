@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	env "github.com/unistack-org/micro-config-env"
+	env "github.com/unistack-org/micro-config-env/v3"
 	"github.com/unistack-org/micro/v3/config"
 )
 

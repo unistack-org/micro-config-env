@@ -258,6 +258,10 @@ func (c *envConfig) String() string {
 	return "env"
 }
 
+func (c *envConfig) Name() string {
+	return c.opts.Name
+}
+
 func NewConfig(opts ...config.Option) config.Config {
 	options := config.NewOptions(opts...)
 	if len(options.StructTag) == 0 {

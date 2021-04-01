@@ -223,7 +223,7 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 		}
 		tag, ok := field.Tag.Lookup(c.opts.StructTag)
 		if !ok {
-			return nil
+			continue
 		}
 		val, ok := os.LookupEnv(tag)
 		if !ok {

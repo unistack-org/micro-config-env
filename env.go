@@ -2,6 +2,7 @@ package env
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -175,6 +176,57 @@ func (c *envConfig) fillValue(ctx context.Context, value reflect.Value, val stri
 	return nil
 }
 
+func (c *envConfig) setValues(ctx context.Context, valueOf reflect.Value) error {
+	var values reflect.Value
+
+	if valueOf.Kind() == reflect.Ptr {
+		values = valueOf.Elem()
+	} else {
+		values = valueOf
+	}
+
+	if values.Kind() == reflect.Invalid {
+		return config.ErrInvalidStruct
+	}
+
+	fields := values.Type()
+
+	for idx := 0; idx < fields.NumField(); idx++ {
+		field := fields.Field(idx)
+		value := values.Field(idx)
+		if rutil.IsZero(value) {
+			continue
+		}
+		if len(field.PkgPath) != 0 {
+			continue
+		}
+		switch value.Kind() {
+		case reflect.Struct:
+			if err := c.setValues(ctx, value); err != nil {
+				return err
+			}
+			continue
+		case reflect.Ptr:
+			value = value.Elem()
+			if err := c.setValues(ctx, value); err != nil {
+				return err
+			}
+			continue
+		}
+
+		tag, ok := field.Tag.Lookup(c.opts.StructTag)
+		if !ok {
+			continue
+		}
+
+		if err := os.Setenv(tag, fmt.Sprintf("%v", value.Interface())); err != nil && !c.opts.AllowFail {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error {
 	var values reflect.Value
 
@@ -243,6 +295,10 @@ func (c *envConfig) Save(ctx context.Context) error {
 		if err := fn(ctx, c); err != nil && !c.opts.AllowFail {
 			return err
 		}
+	}
+
+	if err := c.setValues(ctx, reflect.ValueOf(c.opts.Struct)); err != nil && !c.opts.AllowFail {
+		return err
 	}
 
 	for _, fn := range c.opts.AfterSave {

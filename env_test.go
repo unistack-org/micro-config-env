@@ -18,7 +18,7 @@ type Config struct {
 	MapIntValue    map[string]int    `env:"MAP_INT"`
 }
 
-func TestEnv(t *testing.T) {
+func TestLoad(t *testing.T) {
 	ctx := context.Background()
 	conf := &Config{StringValue: "before_load"}
 	cfg := env.NewConfig(config.Struct(conf))
@@ -66,4 +66,43 @@ func TestEnv(t *testing.T) {
 	}
 
 	t.Logf("cfg %#+v", conf)
+}
+func TestSave(t *testing.T) {
+	ctx := context.Background()
+	conf := &Config{StringValue: "MICRO_CONFIG_ENV"}
+	cfg := env.NewConfig(config.Struct(conf))
+
+	if err := cfg.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := os.LookupEnv("STRING_VALUE"); ok {
+		if err := os.Unsetenv("STRING_VALUE"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := os.Unsetenv("STRING_VALUE"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cfg.Save(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := os.LookupEnv("STRING_VALUE"); !ok {
+		t.Fatal("env value STRING_VALUE=MICRO_CONFIG_ENV not set")
+	}
+
+	if err := os.Unsetenv("STRING_VALUE"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tv := range []string{"STRING_VALUE", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+		if v, ok := os.LookupEnv("STRING_VALUE"); ok {
+			t.Fatalf("env value %s=%s set", tv, v)
+		}
+
+	}
+
 }

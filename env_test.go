@@ -27,7 +27,7 @@ func TestLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := cfg.Load(ctx); err != nil {
+	if err := cfg.Load(ctx, config.LoadOverride(true), config.LoadAppend(true)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -42,7 +42,7 @@ func TestLoad(t *testing.T) {
 	os.Setenv("MAP_STRING", "key1=val1,key2=val2")
 	os.Setenv("MAP_INT", "key1=1,key2=2")
 
-	if err := cfg.Load(ctx); err != nil {
+	if err := cfg.Load(ctx, config.LoadOverride(true), config.LoadAppend(true)); err != nil {
 		t.Fatal(err)
 	}
 	if conf.StringValue != "STRING_VALUE" {

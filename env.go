@@ -32,11 +32,20 @@ func (c *envConfig) Init(opts ...config.Option) error {
 	return nil
 }
 
-func (c *envConfig) Load(ctx context.Context) error {
+func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
 	for _, fn := range c.opts.BeforeLoad {
 		if err := fn(ctx, c); err != nil && !c.opts.AllowFail {
 			return err
 		}
+	}
+
+	options := config.NewLoadOptions(opts...)
+	mopts := []func(*mergo.Config){mergo.WithTypeCheck}
+	if options.Override {
+		mopts = append(mopts, mergo.WithOverride)
+	}
+	if options.Append {
+		mopts = append(mopts, mergo.WithAppendSlice)
 	}
 
 	src, err := rutil.Zero(c.opts.Struct)
@@ -47,7 +56,8 @@ func (c *envConfig) Load(ctx context.Context) error {
 		return err
 	}
 
-	if err = mergo.Merge(c.opts.Struct, src, mergo.WithOverride, mergo.WithTypeCheck, mergo.WithAppendSlice); err != nil && !c.opts.AllowFail {
+	err = mergo.Merge(c.opts.Struct, src, mopts...)
+	if err != nil && !c.opts.AllowFail {
 		return err
 	}
 
@@ -290,7 +300,7 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 	return nil
 }
 
-func (c *envConfig) Save(ctx context.Context) error {
+func (c *envConfig) Save(ctx context.Context, opts ...config.SaveOption) error {
 	for _, fn := range c.opts.BeforeSave {
 		if err := fn(ctx, c); err != nil && !c.opts.AllowFail {
 			return err

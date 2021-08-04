@@ -50,7 +50,7 @@ func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
 
 	src, err := rutil.Zero(c.opts.Struct)
 	if err == nil {
-		err = c.fillValues(ctx, reflect.ValueOf(src))
+		err = fillValues(ctx, reflect.ValueOf(src), c.opts.StructTag)
 	}
 	if err != nil && !c.opts.AllowFail {
 		return err
@@ -70,7 +70,7 @@ func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
 	return nil
 }
 
-func (c *envConfig) fillValue(ctx context.Context, value reflect.Value, val string) error {
+func fillValue(ctx context.Context, value reflect.Value, val string) error {
 	switch value.Kind() {
 	case reflect.Map:
 		t := value.Type()
@@ -84,10 +84,10 @@ func (c *envConfig) fillValue(ctx context.Context, value reflect.Value, val stri
 			kv := strings.FieldsFunc(nval, func(c rune) bool { return c == '=' })
 			mkey := reflect.Indirect(reflect.New(kt))
 			mval := reflect.Indirect(reflect.New(et))
-			if err := c.fillValue(ctx, mkey, kv[0]); err != nil {
+			if err := fillValue(ctx, mkey, kv[0]); err != nil {
 				return err
 			}
-			if err := c.fillValue(ctx, mval, kv[1]); err != nil {
+			if err := fillValue(ctx, mval, kv[1]); err != nil {
 				return err
 			}
 			value.SetMapIndex(mkey, mval)
@@ -97,7 +97,7 @@ func (c *envConfig) fillValue(ctx context.Context, value reflect.Value, val stri
 		value.Set(reflect.MakeSlice(reflect.SliceOf(value.Type().Elem()), len(nvals), len(nvals)))
 		for idx, nval := range nvals {
 			nvalue := reflect.Indirect(reflect.New(value.Type().Elem()))
-			if err := c.fillValue(ctx, nvalue, nval); err != nil {
+			if err := fillValue(ctx, nvalue, nval); err != nil {
 				return err
 			}
 			value.Index(idx).Set(nvalue)
@@ -237,7 +237,7 @@ func (c *envConfig) setValues(ctx context.Context, valueOf reflect.Value) error 
 	return nil
 }
 
-func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error {
+func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) error {
 	var values reflect.Value
 
 	if valueOf.Kind() == reflect.Ptr {
@@ -264,7 +264,7 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 		switch value.Kind() {
 		case reflect.Struct:
 			value.Set(reflect.Indirect(reflect.New(value.Type())))
-			if err := c.fillValues(ctx, value); err != nil {
+			if err := fillValues(ctx, value, structTag); err != nil {
 				return err
 			}
 			continue
@@ -278,12 +278,12 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 				value.Set(reflect.New(value.Type().Elem()))
 			}
 			value = value.Elem()
-			if err := c.fillValues(ctx, value); err != nil {
+			if err := fillValues(ctx, value, structTag); err != nil {
 				return err
 			}
 			continue
 		}
-		tag, ok := field.Tag.Lookup(c.opts.StructTag)
+		tag, ok := field.Tag.Lookup(structTag)
 		if !ok {
 			continue
 		}
@@ -292,7 +292,7 @@ func (c *envConfig) fillValues(ctx context.Context, valueOf reflect.Value) error
 			continue
 		}
 
-		if err := c.fillValue(ctx, value, val); err != nil {
+		if err := fillValue(ctx, value, val); err != nil {
 			return err
 		}
 	}
@@ -326,6 +326,20 @@ func (c *envConfig) String() string {
 
 func (c *envConfig) Name() string {
 	return c.opts.Name
+}
+
+func (c *envConfig) Watch(ctx context.Context, opts ...config.WatchOption) (config.Watcher, error) {
+	w := &envWatcher{
+		opts:  c.opts,
+		wopts: config.NewWatchOptions(opts...),
+		done:  make(chan struct{}),
+		vchan: make(chan map[string]interface{}),
+		echan: make(chan error),
+	}
+
+	go w.run()
+
+	return w, nil
 }
 
 func NewConfig(opts ...config.Option) config.Config {

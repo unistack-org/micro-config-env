@@ -13,9 +13,7 @@ import (
 	rutil "github.com/unistack-org/micro/v3/util/reflect"
 )
 
-var (
-	DefaultStructTag = "env"
-)
+var DefaultStructTag = "env"
 
 type envConfig struct {
 	opts config.Options
@@ -33,10 +31,8 @@ func (c *envConfig) Init(opts ...config.Option) error {
 }
 
 func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
-	for _, fn := range c.opts.BeforeLoad {
-		if err := fn(ctx, c); err != nil && !c.opts.AllowFail {
-			return err
-		}
+	if err := config.DefaultBeforeLoad(ctx, c); err != nil {
+		return err
 	}
 
 	options := config.NewLoadOptions(opts...)
@@ -50,21 +46,20 @@ func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
 
 	src, err := rutil.Zero(c.opts.Struct)
 	if err == nil {
-		err = fillValues(ctx, reflect.ValueOf(src), c.opts.StructTag)
-	}
-	if err != nil && !c.opts.AllowFail {
-		return err
-	}
-
-	err = mergo.Merge(c.opts.Struct, src, mopts...)
-	if err != nil && !c.opts.AllowFail {
-		return err
+		if err = fillValues(ctx, reflect.ValueOf(src), c.opts.StructTag); err == nil {
+			err = mergo.Merge(c.opts.Struct, src, mopts...)
+		}
 	}
 
-	for _, fn := range c.opts.AfterLoad {
-		if err := fn(ctx, c); err != nil && !c.opts.AllowFail {
+	if err != nil {
+		c.opts.Logger.Errorf(c.opts.Context, "env load err: %v", err)
+		if !c.opts.AllowFail {
 			return err
 		}
+	}
+
+	if err := config.DefaultAfterLoad(ctx, c); err != nil {
+		return err
 	}
 
 	return nil
@@ -301,20 +296,19 @@ func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) er
 }
 
 func (c *envConfig) Save(ctx context.Context, opts ...config.SaveOption) error {
-	for _, fn := range c.opts.BeforeSave {
-		if err := fn(ctx, c); err != nil && !c.opts.AllowFail {
-			return err
-		}
-	}
-
-	if err := c.setValues(ctx, reflect.ValueOf(c.opts.Struct)); err != nil && !c.opts.AllowFail {
+	if err := config.DefaultBeforeSave(ctx, c); err != nil {
 		return err
 	}
 
-	for _, fn := range c.opts.AfterSave {
-		if err := fn(ctx, c); err != nil && !c.opts.AllowFail {
+	if err := c.setValues(ctx, reflect.ValueOf(c.opts.Struct)); err != nil {
+		c.opts.Logger.Errorf(c.opts.Context, "env save error: %v", err)
+		if !c.opts.AllowFail {
 			return err
 		}
+	}
+
+	if err := config.DefaultAfterSave(ctx, c); err != nil {
+		return err
 	}
 
 	return nil

@@ -1,12 +1,11 @@
-package env_test
+package env
 
 import (
 	"context"
 	"os"
 	"testing"
 
-	env "github.com/unistack-org/micro-config-env/v3"
-	"github.com/unistack-org/micro/v3/config"
+	"go.unistack.org/micro/v3/config"
 )
 
 type Config struct {
@@ -21,7 +20,7 @@ type Config struct {
 func TestLoad(t *testing.T) {
 	ctx := context.Background()
 	conf := &Config{StringValue: "before_load"}
-	cfg := env.NewConfig(config.Struct(conf))
+	cfg := NewConfig(config.Struct(conf))
 
 	if err := cfg.Init(); err != nil {
 		t.Fatal(err)
@@ -67,10 +66,11 @@ func TestLoad(t *testing.T) {
 
 	t.Logf("cfg %#+v", conf)
 }
+
 func TestSave(t *testing.T) {
 	ctx := context.Background()
 	conf := &Config{StringValue: "MICRO_CONFIG_ENV"}
-	cfg := env.NewConfig(config.Struct(conf))
+	cfg := NewConfig(config.Struct(conf))
 
 	if err := cfg.Init(); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,5 @@ func TestSave(t *testing.T) {
 		if v, ok := os.LookupEnv("STRING_VALUE"); ok {
 			t.Fatalf("env value %s=%s set", tv, v)
 		}
-
 	}
-
 }

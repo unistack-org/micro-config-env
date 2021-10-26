@@ -1,4 +1,4 @@
-package env
+package env // import "go.unistack.org/micro-config-env/v3"
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/imdario/mergo"
-	"github.com/unistack-org/micro/v3/config"
-	rutil "github.com/unistack-org/micro/v3/util/reflect"
+	"go.unistack.org/micro/v3/config"
+	rutil "go.unistack.org/micro/v3/util/reflect"
 )
 
 var DefaultStructTag = "env"

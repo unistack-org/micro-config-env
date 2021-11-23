@@ -4,8 +4,10 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"go.unistack.org/micro/v3/config"
+	rutil "go.unistack.org/micro/v3/util/reflect"
 )
 
 type Config struct {
@@ -15,6 +17,52 @@ type Config struct {
 	IntSlice       []int             `env:"INT_SLICE"`
 	MapStringValue map[string]string `env:"MAP_STRING"`
 	MapIntValue    map[string]int    `env:"MAP_INT"`
+}
+
+func TestMerge(t *testing.T) {
+	ctx := context.Background()
+	type Nested struct {
+		Name string `env:"NAME_VALUE"`
+	}
+	type Cfg struct {
+		Name   string `env:"NAME_VALUE"`
+		Nested Nested
+	}
+
+	conf := &Cfg{}
+
+	cfg := NewConfig(config.Struct(conf))
+
+	if err := cfg.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cfg.Load(ctx, config.LoadOverride(true), config.LoadAppend(true)); err != nil {
+		t.Fatal(err)
+	}
+
+	w, err := cfg.Watch(ctx, config.WatchInterval(50*time.Millisecond, 500*time.Millisecond))
+	defer func() {
+		if err := w.Stop(); err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	os.Setenv("NAME_VALUE", "after")
+	changes, err := w.Next()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for k, v := range changes {
+		if err := rutil.SetFieldByPath(conf, v, k); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if conf.Name != "after" || conf.Nested.Name != "after" {
+		t.Fatalf("changes %#+v not applied to %#+v", changes, conf)
+	}
 }
 
 func TestLoad(t *testing.T) {
@@ -63,8 +111,6 @@ func TestLoad(t *testing.T) {
 	if len(conf.MapIntValue) != 2 {
 		t.Fatalf("something wrong with env config: %#+v", conf.MapIntValue)
 	}
-
-	t.Logf("cfg %#+v", conf)
 }
 
 func TestSave(t *testing.T) {

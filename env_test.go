@@ -11,7 +11,7 @@ import (
 )
 
 type Config struct {
-	StringValue    string            `env:"STRING_VALUE"`
+	StringValue    string            `env:"STRING_VALUE,STRING_VALUE2"`
 	BoolValue      bool              `env:"BOOL_VALUE"`
 	StringSlice    []string          `env:"STRING_SLICE"`
 	IntSlice       []int             `env:"INT_SLICE"`
@@ -20,6 +20,14 @@ type Config struct {
 }
 
 func TestMerge(t *testing.T) {
+	defer func() {
+		for _, v := range []string{"STRING_VALUE", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+			if err := os.Unsetenv(v); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
 	ctx := context.Background()
 	type Nested struct {
 		Name string `env:"NAME_VALUE"`
@@ -47,6 +55,9 @@ func TestMerge(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	os.Setenv("NAME_VALUE", "after")
 	changes, err := w.Next()
@@ -66,6 +77,14 @@ func TestMerge(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
+	defer func() {
+		for _, v := range []string{"STRING_VALUE", "STRING_VALUE2", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+			if err := os.Unsetenv(v); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
 	ctx := context.Background()
 	conf := &Config{StringValue: "before_load"}
 	cfg := NewConfig(config.Struct(conf))
@@ -111,9 +130,23 @@ func TestLoad(t *testing.T) {
 	if len(conf.MapIntValue) != 2 {
 		t.Fatalf("something wrong with env config: %#+v", conf.MapIntValue)
 	}
+
+	for _, v := range []string{"STRING_VALUE", "STRING_VALUE2", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+		if err := os.Unsetenv(v); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func TestSave(t *testing.T) {
+	defer func() {
+		for _, v := range []string{"STRING_VALUE", "STRING_VALUE2", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+			if err := os.Unsetenv(v); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
 	ctx := context.Background()
 	conf := &Config{StringValue: "MICRO_CONFIG_ENV"}
 	cfg := NewConfig(config.Struct(conf))
@@ -147,6 +180,61 @@ func TestSave(t *testing.T) {
 	for _, tv := range []string{"STRING_VALUE", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
 		if v, ok := os.LookupEnv("STRING_VALUE"); ok {
 			t.Fatalf("env value %s=%s set", tv, v)
+		}
+	}
+
+	for _, v := range []string{"STRING_VALUE", "STRING_VALUE2", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+		if err := os.Unsetenv(v); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestLoadMultiple(t *testing.T) {
+	defer func() {
+		for _, v := range []string{"STRING_VALUE", "STRING_VALUE2", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+			if err := os.Unsetenv(v); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	ctx := context.Background()
+	conf := &Config{StringValue: "before_load"}
+	cfg := NewConfig(config.Struct(conf))
+
+	if err := cfg.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cfg.Load(ctx, config.LoadOverride(true), config.LoadAppend(true)); err != nil {
+		t.Fatal(err)
+	}
+
+	if conf.StringValue != "before_load" {
+		t.Fatalf("something wrong with env config: %#+v", conf)
+	}
+
+	os.Setenv("STRING_VALUE", "STRING_VALUE1")
+	os.Setenv("STRING_VALUE2", "STRING_VALUE2")
+	defer func() {
+		for _, v := range []string{"STRING_VALUE", "STRING_VALUE2"} {
+			if err := os.Unsetenv(v); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}()
+
+	if err := cfg.Load(ctx, config.LoadOverride(true), config.LoadAppend(true)); err != nil {
+		t.Fatal(err)
+	}
+	if conf.StringValue != "STRING_VALUE2" {
+		t.Fatalf("something wrong with env config: %#+v", conf)
+	}
+
+	for _, v := range []string{"STRING_VALUE", "STRING_VALUE2", "BOOL_VALUE", "STRING_SLICE", "INT_SLICE", "MAP_STRING", "MAP_INT"} {
+		if err := os.Unsetenv(v); err != nil {
+			t.Fatal(err)
 		}
 	}
 }

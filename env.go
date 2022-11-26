@@ -219,13 +219,14 @@ func (c *envConfig) setValues(ctx context.Context, valueOf reflect.Value) error 
 			continue
 		}
 
-		tag, ok := field.Tag.Lookup(c.opts.StructTag)
+		tags, ok := field.Tag.Lookup(c.opts.StructTag)
 		if !ok {
 			continue
 		}
-
-		if err := os.Setenv(tag, fmt.Sprintf("%v", value.Interface())); err != nil && !c.opts.AllowFail {
-			return err
+		for _, tag := range strings.Split(tags, ",") {
+			if err := os.Setenv(tag, fmt.Sprintf("%v", value.Interface())); err != nil && !c.opts.AllowFail {
+				return err
+			}
 		}
 	}
 
@@ -278,16 +279,24 @@ func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) er
 			}
 			continue
 		}
-		tag, ok := field.Tag.Lookup(structTag)
-		if !ok {
-			continue
-		}
-		val, ok := os.LookupEnv(tag)
+		tags, ok := field.Tag.Lookup(structTag)
 		if !ok {
 			continue
 		}
 
-		if err := fillValue(ctx, value, val); err != nil {
+		var eval string
+		for _, tag := range strings.Split(tags, ",") {
+			if val, ok := os.LookupEnv(tag); !ok {
+				continue
+			} else {
+				eval = val
+			}
+		}
+		if eval == "" {
+			continue
+		}
+
+		if err := fillValue(ctx, value, eval); err != nil {
 			return err
 		}
 	}

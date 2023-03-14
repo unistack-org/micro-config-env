@@ -53,10 +53,15 @@ func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
 		mopts = append(mopts, mergo.WithAppendSlice)
 	}
 
-	src, err := rutil.Zero(c.opts.Struct)
+	dst := c.opts.Struct
+	if options.Struct != nil {
+		dst = options.Struct
+	}
+
+	src, err := rutil.Zero(dst)
 	if err == nil {
 		if err = fillValues(ctx, reflect.ValueOf(src), c.opts.StructTag); err == nil {
-			err = mergo.Merge(c.opts.Struct, src, mopts...)
+			err = mergo.Merge(dst, src, mopts...)
 		}
 	}
 
@@ -311,11 +316,18 @@ func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) er
 }
 
 func (c *envConfig) Save(ctx context.Context, opts ...config.SaveOption) error {
+	options := config.NewSaveOptions(opts...)
+
 	if err := config.DefaultBeforeSave(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
-	if err := c.setValues(ctx, reflect.ValueOf(c.opts.Struct)); err != nil && !c.opts.AllowFail {
+	dst := c.opts.Struct
+	if options.Struct != nil {
+		dst = options.Struct
+	}
+
+	if err := c.setValues(ctx, reflect.ValueOf(dst)); err != nil && !c.opts.AllowFail {
 		return err
 	}
 

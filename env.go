@@ -27,6 +27,15 @@ func (c *envConfig) Init(opts ...config.Option) error {
 	for _, o := range opts {
 		o(&c.opts)
 	}
+
+	if err := config.DefaultBeforeInit(c.opts.Context, c); err != nil {
+		return err
+	}
+
+	if err := config.DefaultAfterInit(c.opts.Context, c); err != nil {
+		return err
+	}
+
 	return nil
 }
 

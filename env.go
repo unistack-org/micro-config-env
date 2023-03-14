@@ -28,11 +28,11 @@ func (c *envConfig) Init(opts ...config.Option) error {
 		o(&c.opts)
 	}
 
-	if err := config.DefaultBeforeInit(c.opts.Context, c); err != nil {
+	if err := config.DefaultBeforeInit(c.opts.Context, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
-	if err := config.DefaultAfterInit(c.opts.Context, c); err != nil {
+	if err := config.DefaultAfterInit(c.opts.Context, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
@@ -40,7 +40,7 @@ func (c *envConfig) Init(opts ...config.Option) error {
 }
 
 func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
-	if err := config.DefaultBeforeLoad(ctx, c); err != nil {
+	if err := config.DefaultBeforeLoad(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
@@ -60,14 +60,11 @@ func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
 		}
 	}
 
-	if err != nil {
-		c.opts.Logger.Errorf(c.opts.Context, "env load err: %v", err)
-		if !c.opts.AllowFail {
-			return err
-		}
+	if err != nil && !c.opts.AllowFail {
+		return err
 	}
 
-	if err := config.DefaultAfterLoad(ctx, c); err != nil {
+	if err := config.DefaultAfterLoad(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
@@ -314,18 +311,15 @@ func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) er
 }
 
 func (c *envConfig) Save(ctx context.Context, opts ...config.SaveOption) error {
-	if err := config.DefaultBeforeSave(ctx, c); err != nil {
+	if err := config.DefaultBeforeSave(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
-	if err := c.setValues(ctx, reflect.ValueOf(c.opts.Struct)); err != nil {
-		c.opts.Logger.Errorf(c.opts.Context, "env save error: %v", err)
-		if !c.opts.AllowFail {
-			return err
-		}
+	if err := c.setValues(ctx, reflect.ValueOf(c.opts.Struct)); err != nil && !c.opts.AllowFail {
+		return err
 	}
 
-	if err := config.DefaultAfterSave(ctx, c); err != nil {
+	if err := config.DefaultAfterSave(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 

@@ -1,8 +1,8 @@
-module go.unistack.org/micro-config-env/v3
+module go.unistack.org/micro-config-env/v4
 
-go 1.18
+go 1.20
 
 require (
-	github.com/imdario/mergo v0.3.13
-	go.unistack.org/micro/v3 v3.10.16
+	github.com/imdario/mergo v0.3.14
+	go.unistack.org/micro/v4 v4.0.1
 )

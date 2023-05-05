@@ -3,9 +3,9 @@ package env
 import (
 	"reflect"
 
-	"go.unistack.org/micro/v3/config"
-	"go.unistack.org/micro/v3/util/jitter"
-	rutil "go.unistack.org/micro/v3/util/reflect"
+	"go.unistack.org/micro/v4/config"
+	"go.unistack.org/micro/v4/util/jitter"
+	rutil "go.unistack.org/micro/v4/util/reflect"
 )
 
 type envWatcher struct {

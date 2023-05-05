@@ -27,11 +27,20 @@ func (c *envConfig) Init(opts ...config.Option) error {
 	for _, o := range opts {
 		o(&c.opts)
 	}
+
+	if err := config.DefaultBeforeInit(c.opts.Context, c); err != nil && !c.opts.AllowFail {
+		return err
+	}
+
+	if err := config.DefaultAfterInit(c.opts.Context, c); err != nil && !c.opts.AllowFail {
+		return err
+	}
+
 	return nil
 }
 
 func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
-	if err := config.DefaultBeforeLoad(ctx, c); err != nil {
+	if err := config.DefaultBeforeLoad(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
@@ -44,21 +53,23 @@ func (c *envConfig) Load(ctx context.Context, opts ...config.LoadOption) error {
 		mopts = append(mopts, mergo.WithAppendSlice)
 	}
 
-	src, err := rutil.Zero(c.opts.Struct)
+	dst := c.opts.Struct
+	if options.Struct != nil {
+		dst = options.Struct
+	}
+
+	src, err := rutil.Zero(dst)
 	if err == nil {
 		if err = fillValues(ctx, reflect.ValueOf(src), c.opts.StructTag); err == nil {
-			err = mergo.Merge(c.opts.Struct, src, mopts...)
+			err = mergo.Merge(dst, src, mopts...)
 		}
 	}
 
-	if err != nil {
-		c.opts.Logger.Errorf(c.opts.Context, "env load err: %v", err)
-		if !c.opts.AllowFail {
-			return err
-		}
+	if err != nil && !c.opts.AllowFail {
+		return err
 	}
 
-	if err := config.DefaultAfterLoad(ctx, c); err != nil {
+	if err := config.DefaultAfterLoad(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
@@ -219,13 +230,14 @@ func (c *envConfig) setValues(ctx context.Context, valueOf reflect.Value) error 
 			continue
 		}
 
-		tag, ok := field.Tag.Lookup(c.opts.StructTag)
+		tags, ok := field.Tag.Lookup(c.opts.StructTag)
 		if !ok {
 			continue
 		}
-
-		if err := os.Setenv(tag, fmt.Sprintf("%v", value.Interface())); err != nil && !c.opts.AllowFail {
-			return err
+		for _, tag := range strings.Split(tags, ",") {
+			if err := os.Setenv(tag, fmt.Sprintf("%v", value.Interface())); err != nil && !c.opts.AllowFail {
+				return err
+			}
 		}
 	}
 
@@ -278,16 +290,24 @@ func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) er
 			}
 			continue
 		}
-		tag, ok := field.Tag.Lookup(structTag)
-		if !ok {
-			continue
-		}
-		val, ok := os.LookupEnv(tag)
+		tags, ok := field.Tag.Lookup(structTag)
 		if !ok {
 			continue
 		}
 
-		if err := fillValue(ctx, value, val); err != nil {
+		var eval string
+		for _, tag := range strings.Split(tags, ",") {
+			if val, ok := os.LookupEnv(tag); !ok {
+				continue
+			} else {
+				eval = val
+			}
+		}
+		if eval == "" {
+			continue
+		}
+
+		if err := fillValue(ctx, value, eval); err != nil {
 			return err
 		}
 	}
@@ -296,18 +316,22 @@ func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) er
 }
 
 func (c *envConfig) Save(ctx context.Context, opts ...config.SaveOption) error {
-	if err := config.DefaultBeforeSave(ctx, c); err != nil {
+	options := config.NewSaveOptions(opts...)
+
+	if err := config.DefaultBeforeSave(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 
-	if err := c.setValues(ctx, reflect.ValueOf(c.opts.Struct)); err != nil {
-		c.opts.Logger.Errorf(c.opts.Context, "env save error: %v", err)
-		if !c.opts.AllowFail {
-			return err
-		}
+	dst := c.opts.Struct
+	if options.Struct != nil {
+		dst = options.Struct
 	}
 
-	if err := config.DefaultAfterSave(ctx, c); err != nil {
+	if err := c.setValues(ctx, reflect.ValueOf(dst)); err != nil && !c.opts.AllowFail {
+		return err
+	}
+
+	if err := config.DefaultAfterSave(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
 

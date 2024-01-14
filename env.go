@@ -41,6 +41,10 @@ func (c *envConfig) Init(opts ...options.Option) error {
 }
 
 func (c *envConfig) Load(ctx context.Context, opts ...options.Option) error {
+	if c.opts.SkipLoad != nil && c.opts.SkipLoad(ctx, c) {
+		return nil
+	}
+
 	if err := config.DefaultBeforeLoad(ctx, c); err != nil && !c.opts.AllowFail {
 		return err
 	}
@@ -317,6 +321,10 @@ func fillValues(ctx context.Context, valueOf reflect.Value, structTag string) er
 }
 
 func (c *envConfig) Save(ctx context.Context, opts ...options.Option) error {
+	if c.opts.SkipSave != nil && c.opts.SkipSave(ctx, c) {
+		return nil
+	}
+
 	options := config.NewSaveOptions(opts...)
 
 	if err := config.DefaultBeforeSave(ctx, c); err != nil && !c.opts.AllowFail {

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/imdario/mergo"
+"dario.cat/mergo"
 	"go.unistack.org/micro/v4/config"
 	"go.unistack.org/micro/v4/options"
 	rutil "go.unistack.org/micro/v4/util/reflect"

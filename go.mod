@@ -1,10 +1,10 @@
 module go.unistack.org/micro-config-env/v3
 
-go 1.18
+go 1.20
 
 require (
-	github.com/imdario/mergo v0.3.16
-	go.unistack.org/micro/v3 v3.10.36
+	dario.cat/mergo v1.0.0
+	go.unistack.org/micro/v3 v3.10.44
 )
 
-require github.com/google/uuid v1.5.0 // indirect
+require github.com/google/uuid v1.6.0 // indirect

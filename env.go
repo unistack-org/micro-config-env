@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-"dario.cat/mergo"
+	"dario.cat/mergo"
 	"go.unistack.org/micro/v4/config"
 	"go.unistack.org/micro/v4/options"
 	rutil "go.unistack.org/micro/v4/util/reflect"
@@ -25,8 +25,12 @@ func (c *envConfig) Options() config.Options {
 }
 
 func (c *envConfig) Init(opts ...options.Option) error {
+	var err error
+
 	for _, o := range opts {
-		o(&c.opts)
+		if err = o(&c.opts); err != nil {
+			return err
+		}
 	}
 
 	if err := config.DefaultBeforeInit(c.opts.Context, c); err != nil && !c.opts.AllowFail {

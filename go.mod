@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	dario.cat/mergo v1.0.2
-	go.unistack.org/micro/v5 v5.0.1
+	go.unistack.org/micro/v5 v5.0.4
 )
 
 require (
